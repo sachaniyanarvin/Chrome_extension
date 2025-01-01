@@ -1,14 +1,34 @@
-<!-- what to display the extension poppu pages -->
-
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Website Time Tracker</title>
-  <link rel="stylesheet" type="text/css" href="style.css">
+    <head>
+        <title>DA</title>
+        <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2>Website Time Statistics</h2>
-  <div id="timeStats"></div>
-  <script src="script.js"></script>
+    <div class="container">
+        <div class="left-panel">
+        <h2>DA</h2>
+        <div id="timeStats"></div>
+    </div>
+    <div class="right-panel">
+        <h2>Notes & Meetings</h2>
+        <button class="add-note" id="addNote">Add New Note</button>
+        <div class="note-form" id="noteForm">
+            <input type="text" id="noteTitle" placeholder="Title">
+            <select id="noteType">
+                <option value="meeting">Meeting</option>
+                <option value="project">Project</option>
+                <option value="general">General Note</option>
+            </select>
+            <textarea id="noteContent" placeholder="Enter your notes here..."></textarea>
+            <div class="form-buttons">
+                <button class="save-note" id="saveNote">Save</button>
+                <button class="cancel-note" id="cancelNote">Cancel</button>
+            </div>
+        </div>
+      <div class="notes-section" id="notesSection"></div>
+    </div>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>

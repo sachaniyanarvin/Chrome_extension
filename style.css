@@ -1,0 +1,17 @@
+body {
+    width: 400px;
+    padding: 10px;
+    font-family: Arial, sans-serif;
+  }
+  .site-entry {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  .login-toggle {
+    margin-top: 5px;
+  }
+  .save-choice {
+    margin-top: 5px;
+  }

@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "D-STATUS",
+    "name": "Notes",
     "version": "1.0",
     "description": "Track time spent on different websites",
     "permissions": [

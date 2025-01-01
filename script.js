@@ -1,164 +1,173 @@
+let editingNoteId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
-    loadWebsiteStats();
-    loadNotes();
-    setupNoteFormListeners();
+  loadNotes();
+  setupEventListeners();
+});
+
+function setupEventListeners() {
+  // Toggle AI Panel
+  document.getElementById('toggleAI').addEventListener('click', () => {
+    document.getElementById('aiPanel').classList.toggle('active');
   });
-  
-  function loadWebsiteStats() {
-    chrome.storage.local.get(['timeData'], (result) => {
-      const timeData = result.timeData || {};
-      const statsDiv = document.getElementById('timeStats');
-      statsDiv.innerHTML = '';
-      
-      for (const hostname in timeData) {
-        const siteData = timeData[hostname];
-        const siteDiv = createSiteEntry(hostname, siteData);
-        statsDiv.appendChild(siteDiv);
-      }
-    });
-  }
-  
-  function createSiteEntry(hostname, siteData) {
-    const siteDiv = document.createElement('div');
-    siteDiv.className = 'site-entry';
-    
-    const today = new Date().toISOString().split('T')[0];
-    const weekNumber = getWeekNumber(new Date());
-    const monthYear = new Date().toISOString().slice(0, 7);
-    
-    siteDiv.innerHTML = `
-      <div class="site-name">${hostname}</div>
-      <div class="time-stats">
-        <div class="stat-box">
-          <div class="stat-label">Today</div>
-          <div class="stat-value">${formatTime(siteData.daily[today] || 0)}</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">This Week</div>
-          <div class="stat-value">${formatTime(siteData.weekly[weekNumber] || 0)}</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">This Month</div>
-          <div class="stat-value">${formatTime(siteData.monthly[monthYear] || 0)}</div>
-        </div>
-      </div>
-      <div class="controls">
-        <label class="login-toggle">
-          <span>Login Status:</span>
-          <label class="toggle-switch">
-            <input type="checkbox" ${siteData.loginStatus ? 'checked' : ''}>
-            <span class="slider"></span>
-          </label>
-        </label>
-      </div>
-    `;
-    
-    siteDiv.querySelector('input[type="checkbox"]').addEventListener('change', (e) => {
-      siteData.loginStatus = e.target.checked;
-      chrome.storage.local.set({ timeData: { ...timeData, [hostname]: siteData } });
-    });
-    
-    return siteDiv;
-  }
-  
-  function setupNoteFormListeners() {
-    const addNoteBtn = document.getElementById('addNote');
-    const noteForm = document.getElementById('noteForm');
-    const saveNoteBtn = document.getElementById('saveNote');
-    const cancelNoteBtn = document.getElementById('cancelNote');
-    
-    addNoteBtn.addEventListener('click', () => {
-      noteForm.classList.add('active');
-    });
-    
-    cancelNoteBtn.addEventListener('click', () => {
-      noteForm.classList.remove('active');
-      clearNoteForm();
-    });
-    
-    saveNoteBtn.addEventListener('click', saveNote);
-  }
-  
-  function saveNote() {
-    const title = document.getElementById('noteTitle').value;
-    const type = document.getElementById('noteType').value;
-    const content = document.getElementById('noteContent').value;
-    
-    if (!title || !content) {
-      alert('Please fill in all fields');
-      return;
+
+  // Add Note
+  document.getElementById('addNote').addEventListener('click', () => {
+    editingNoteId = null;
+    document.getElementById('noteForm').classList.add('active');
+  });
+
+  // Save Note
+  document.getElementById('saveNote').addEventListener('click', saveNote);
+
+  // Cancel Note
+  document.getElementById('cancelNote').addEventListener('click', () => {
+    document.getElementById('noteForm').classList.remove('active');
+    clearNoteForm();
+  });
+
+  // Send Message
+  document.getElementById('sendMessage').addEventListener('click', sendMessage);
+  document.getElementById('chatInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      sendMessage();
     }
-    
-    const note = {
-      id: Date.now(),
-      title,
-      type,
-      content,
-      date: new Date().toISOString(),
-      website: activeUrl || 'General'
-    };
-    
-    chrome.storage.local.get(['notes'], (result) => {
-      const notes = result.notes || [];
-      notes.unshift(note);
-      chrome.storage.local.set({ notes }, () => {
-        loadNotes();
-        clearNoteForm();
-        document.getElementById('noteForm').classList.remove('active');
-      });
-    });
+  });
+}
+
+function saveNote() {
+  const title = document.getElementById('noteTitle').value;
+  const type = document.getElementById('noteType').value;
+  const content = document.getElementById('noteContent').value;
+
+  if (!title || !content) {
+    alert('Please fill in all fields');
+    return;
   }
-  
-  function loadNotes() {
-    chrome.storage.local.get(['notes'], (result) => {
-      const notes = result.notes || [];
-      const notesSection = document.getElementById('notesSection');
-      notesSection.innerHTML = '';
-      
-      notes.forEach(note => {
-        const noteDiv = createNoteEntry(note);
-        notesSection.appendChild(noteDiv);
-      });
-    });
-  }
-  
-  function createNoteEntry(note) {
-    const noteDiv = document.createElement('div');
-    noteDiv.className = 'note-entry';
+
+  const note = {
+    id: editingNoteId || Date.now(),
+    title,
+    type,
+    content,
+    date: new Date().toISOString()
+  };
+
+  chrome.storage.local.get(['notes'], (result) => {
+    let notes = result.notes || [];
     
-    noteDiv.innerHTML = `
-      <div class="note-header">
-        <span class="note-title">${note.title} (${note.type})</span>
-        <span class="note-date">${new Date(note.date).toLocaleString()}</span>
-      </div>
-      <div class="note-content">${note.content}</div>
-    `;
-    
-    return noteDiv;
-  }
-  
-  function clearNoteForm() {
-    document.getElementById('noteTitle').value = '';
-    document.getElementById('noteType').value = 'meeting';
-    document.getElementById('noteContent').value = '';
-  }
-  
-  function formatTime(ms) {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
+    if (editingNoteId) {
+      notes = notes.map(n => n.id === editingNoteId ? note : n);
     } else {
-      return `${seconds}s`;
+      notes.unshift(note);
     }
-  }
+
+    chrome.storage.local.set({ notes }, () => {
+      loadNotes();
+      clearNoteForm();
+      document.getElementById('noteForm').classList.remove('active');
+    });
+  });
+}
+
+function loadNotes() {
+  chrome.storage.local.get(['notes'], (result) => {
+    const notes = result.notes || [];
+    const notesList = document.getElementById('notesList');
+    notesList.innerHTML = '';
+    
+    notes.forEach(note => {
+      const noteCard = createNoteCard(note);
+      notesList.appendChild(noteCard);
+    });
+  });
+}
+
+function createNoteCard(note) {
+  const div = document.createElement('div');
+  div.className = 'note-card';
   
-  function getWeekNumber(date) {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const weekNumber = Math.ceil((((date - firstDayOfYear) / 86400000) + firstDayOfYear.getDay() + 1) / 7);
-    return `${date.getFullYear()}-W${weekNumber}`;
+  div.innerHTML = `
+    <div class="note-header">
+      <div>
+        <span class="note-title">${note.title}</span>
+        <small>(${note.type})</small>
+      </div>
+      <div class="note-actions">
+        <button class="edit-btn">Edit</button>
+        <button class="delete-btn">Delete</button>
+      </div>
+    </div>
+    <div class="note-content">${note.content}</div>
+    <small>${new Date(note.date).toLocaleString()}</small>
+  `;
+
+  // Edit Note
+  div.querySelector('.edit-btn').addEventListener('click', () => {
+    editingNoteId = note.id;
+    document.getElementById('noteTitle').value = note.title;
+    document.getElementById('noteType').value = note.type;
+    document.getElementById('noteContent').value = note.content;
+    document.getElementById('noteForm').classList.add('active');
+  });
+
+  // Delete Note
+  div.querySelector('.delete-btn').addEventListener('click', () => {
+    if (confirm('Are you sure you want to delete this note?')) {
+      deleteNote(note.id);
+    }
+  });
+
+  return div;
+}
+
+function deleteNote(noteId) {
+  chrome.storage.local.get(['notes'], (result) => {
+    const notes = result.notes.filter(note => note.id !== noteId);
+    chrome.storage.local.set({ notes }, loadNotes);
+  });
+}
+
+function clearNoteForm() {
+  document.getElementById('noteTitle').value = '';
+  document.getElementById('noteType').value = 'meeting';
+  document.getElementById('noteContent').value = '';
+  editingNoteId = null;
+}
+
+// Simple AI chat functionality
+function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  
+  if (message) {
+    addMessage('user-message', message);
+    input.value = '';
+    
+    // Simulate AI response
+    setTimeout(() => {
+      const response = getAIResponse(message);
+      addMessage('ai-message', response);
+    }, 1000);
   }
+}
+
+function addMessage(className, content) {
+  const messages = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `message ${className}`;
+  div.textContent = content;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function getAIResponse(message) {
+  // Simple response logic - can be enhanced with actual AI integration
+  const responses = [
+    "I can help you organize your notes better. What specific help do you need?",
+    "Would you like me to help you summarize your notes?",
+    "I can suggest some ways to structure your notes more effectively.",
+    "Let me know if you need help with formatting or organizing your thoughts."
+  ];
+  return responses[Math.floor(Math.random() * responses.length)];
+}
